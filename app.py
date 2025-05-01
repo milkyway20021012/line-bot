@@ -1,6 +1,6 @@
 import os, threading, json
 from flask import Flask, request, abort
-from linebot import LineBotApi, WebhookHandler
+from linebot import LineBotApi, Webhookline_handler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import *
 from openai import OpenAI
@@ -12,7 +12,7 @@ from google.oauth2 import service_account  # 用來處理 JSON 金鑰內容
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(LINE_CHANNEL_SECRET)
+line_handler = Webhookline_handler(LINE_CHANNEL_SECRET)
 
 # OpenAI 設定
 openai_client = OpenAI(api_key=os.getenv('API_KEY'))
@@ -34,13 +34,13 @@ def callback():
     body = request.get_data(as_text=True)
 
     try:
-        handler.handle(body, signature)
+        line_handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
 
     return 'OK'
 
-@handler.add(MessageEvent, message=TextMessage)
+@line_handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     threading.Thread(target=process_text_message, args=(event,)).start()
 
@@ -81,7 +81,7 @@ def process_text_message(event):
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
-@handler.add(MessageEvent, message=AudioMessage)
+@line_handler.add(MessageEvent, message=AudioMessage)
 def handle_audio(event):
     threading.Thread(target=process_audio_message, args=(event,)).start()
 
@@ -116,3 +116,4 @@ def process_audio_message(event):
 
 if __name__ == "__main__":
     app.run(port=8080)
+    
