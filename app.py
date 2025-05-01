@@ -133,6 +133,3 @@ def process_text_message(event):
 # 本地測試
 if __name__ == "__main__":
     app.run(port=8080)
-
-# Vercel 專用
-handler = app
