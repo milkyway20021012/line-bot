@@ -17,14 +17,25 @@ openai_client = OpenAI(api_key=os.getenv('API_KEY'))
 # 初始化 Flask
 app = Flask(__name__)
 
+# ✅ 新增首頁 route，避免 Vercel console 404
+@app.route("/", methods=["GET"])
+def index():
+    return "✅ LINE Bot on Vercel is running."
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
 
+    # ✅ webhook debug log
+    print("📩 Received callback from LINE")
+    print("🔒 Signature:", signature)
+    print("📦 Body:", body)
+
     try:
         line_handler.handle(body, signature)
     except InvalidSignatureError:
+        print("❌ Invalid Signature")
         abort(400)
 
     return 'OK'
@@ -35,8 +46,6 @@ def handle_message(event):
 
 def process_text_message(event):
     user_text = event.message.text.strip()
-
-    # 範例選單：Apple Flex Message
     if user_text.lower() == "apple":
         flex_message = FlexSendMessage(
             alt_text='Apple 商店選單',
@@ -102,7 +111,6 @@ def process_text_message(event):
         line_bot_api.reply_message(event.reply_token, flex_message)
         return
 
-    # 回覆 GPT 回應
     try:
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -117,5 +125,6 @@ def process_text_message(event):
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
+# ✅ 本地測試時用 app.run，Vercel 用 handler
 if __name__ == "__main__":
     app.run(port=8080)
