@@ -123,5 +123,3 @@ def handle_message(event):
 if __name__ == "__main__":
     app.run(port=8080)
 
-# ✅ 給 Vercel 的 WSGI handler
-handler = app
