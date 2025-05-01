@@ -1,4 +1,4 @@
-import os, threading
+import os
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -39,7 +39,8 @@ def callback():
 
 @line_handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    threading.Thread(target=process_text_message, args=(event,)).start()
+    print("✅ webhook message received")
+    process_text_message(event)  # 🔄 暫時移除 threading
 
 def process_text_message(event):
     user_text = event.message.text.strip()
