@@ -1,4 +1,4 @@
-import os, threading
+import os, threading, json
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -6,23 +6,31 @@ from linebot.models import *
 from openai import OpenAI
 from google.cloud import translate_v2 as translate
 from google.cloud import speech
+from google.oauth2 import service_account  # 用來處理 JSON 金鑰內容
 
-# 設定環境
+# LINE 設定
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
+
+# OpenAI 設定
 openai_client = OpenAI(api_key=os.getenv('API_KEY'))
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gcp-translate-key.json"
-translate_client = translate.Client()
-speech_client = speech.SpeechClient()
+# 從 JSON 字串建立 Google Credentials
+credentials_info = json.loads(os.getenv("GOOGLE_CREDENTIALS_JSON"))
+credentials = service_account.Credentials.from_service_account_info(credentials_info)
 
+# 初始化翻譯與語音服務
+translate_client = translate.Client(credentials=credentials)
+speech_client = speech.SpeechClient(credentials=credentials)
+
+# 初始化 Flask
 app = Flask(__name__)
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    signature = request.headers['X-Line-Signature']
+    signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
 
     try:
@@ -30,9 +38,8 @@ def callback():
     except InvalidSignatureError:
         abort(400)
 
-    return 'OK', 200  # ⏱️ 快速回應 LINE Webhook
+    return 'OK'
 
-# 🔄 把處理事件的內容放在 background thread
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     threading.Thread(target=process_text_message, args=(event,)).start()
@@ -40,36 +47,26 @@ def handle_message(event):
 def process_text_message(event):
     user_text = event.message.text.strip()
 
-    # Apple Flex Message
-    if user_text.lower() == "apple":
-        # [保持原本 Flex Message 略去]
-        return
-
-    if user_text.lower() == "選擇輸入語言":
-        # [保持原本 Quick Reply 略去]
-        return
-
-    if user_text.startswith("輸入語言:"):
-        # [略去]
-        return
+    # Apple 範例略去...
 
     if user_text.startswith("翻譯:"):
-        # 翻譯內容處理
         try:
             target_language = "en"
             if "日文" in user_text:
                 target_language = "ja"
             elif "韓文" in user_text:
                 target_language = "ko"
+
             text_to_translate = user_text.replace("翻譯:", "").strip()
             result = translate_client.translate(text_to_translate, target_language=target_language)
             translated = result['translatedText']
         except Exception as e:
             translated = f"⚠️ 翻譯失敗：{str(e)}"
+
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=translated))
         return
 
-    # 回應 GPT
+    # 回 GPT
     try:
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -83,7 +80,6 @@ def process_text_message(event):
         reply_text = f"⚠️ 發生錯誤：{str(e)}"
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-
 
 @handler.add(MessageEvent, message=AudioMessage)
 def handle_audio(event):
