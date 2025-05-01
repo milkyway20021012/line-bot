@@ -1,6 +1,6 @@
 import os, threading, json
 from flask import Flask, request, abort
-from linebot import LineBotApi, Webhookline_handler
+from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import *
 from openai import OpenAI
@@ -12,7 +12,7 @@ from google.oauth2 import service_account  # 用來處理 JSON 金鑰內容
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-line_handler = Webhookline_handler(LINE_CHANNEL_SECRET)
+line_handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 # OpenAI 設定
 openai_client = OpenAI(api_key=os.getenv('API_KEY'))
