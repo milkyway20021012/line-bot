@@ -1,4 +1,4 @@
-import os, threading, json
+import os, threading
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -11,13 +11,13 @@ LINE_CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 line_handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
-# OpenAI 設定
+# OpenAI 初始化（目前未用，可擴充）
 openai_client = OpenAI(api_key=os.getenv('API_KEY'))
 
 # 初始化 Flask
 app = Flask(__name__)
 
-# ✅ 新增首頁 route，避免 Vercel console 404
+# ✅ 首頁 route，避免 Vercel 404
 @app.route("/", methods=["GET"])
 def index():
     return "✅ LINE Bot on Vercel is running."
@@ -27,9 +27,8 @@ def callback():
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
 
-    # ✅ webhook debug log
+    # Debug log
     print("📩 Received callback from LINE")
-    print("🔒 Signature:", signature)
     print("📦 Body:", body)
 
     try:
@@ -46,6 +45,7 @@ def handle_message(event):
 
 def process_text_message(event):
     user_text = event.message.text.strip()
+
     if user_text.lower() == "apple":
         flex_message = FlexSendMessage(
             alt_text='Apple 商店選單',
@@ -111,20 +111,10 @@ def process_text_message(event):
         line_bot_api.reply_message(event.reply_token, flex_message)
         return
 
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "你是 LINE 機器人中的智慧助理"},
-                {"role": "user", "content": user_text}
-            ]
-        )
-        reply_text = response.choices[0].message.content.strip()
-    except Exception as e:
-        reply_text = f"⚠️ 發生錯誤：{str(e)}"
-
+    # ✅ 預設回覆使用者輸入
+    reply_text = f"你說的是：{user_text}"
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
-# ✅ 本地測試時用 app.run，Vercel 用 handler
+# ✅ Vercel handler
 if __name__ == "__main__":
     app.run(port=8080)
