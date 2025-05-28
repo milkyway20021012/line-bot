@@ -73,7 +73,6 @@ def process_text_message(event):
         line_bot_api.push_message(user_id, TextSendMessage(text=reply_text))
     except Exception as e:
         print("⚠️ 推送回覆訊息失敗：", e)
-
 # 本地測試
 if __name__ == "__main__":
     app.run(port=8080)
