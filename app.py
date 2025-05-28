@@ -45,23 +45,27 @@ def handle_message(event):
 def process_text_message(event):
     user_text = event.message.text.strip()
 
-    # OpenAI GPT 回覆
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "你是 LINE 機器人中的智慧助理"},
-                {"role": "user", "content": user_text}
-            ]
-        )
-        reply_text = response.choices[0].message.content.strip()
-    except Exception as e:
-        reply_text = f"⚠️ 發生錯誤：{str(e)}"
+    if user_text == "排行榜":
+        reply_text = "📊 此功能尚未完善，敬請期待後續更新！"
+    else:
+        # OpenAI GPT 回覆
+        try:
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "你是 LINE 機器人中的智慧助理"},
+                    {"role": "user", "content": user_text}
+                ]
+            )
+            reply_text = response.choices[0].message.content.strip()
+        except Exception as e:
+            reply_text = f"⚠️ 發生錯誤：{str(e)}"
 
     try:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
     except Exception as e:
-        print("⚠️ 回覆 GPT 訊息失敗：", e)
+        print("⚠️ 回覆訊息失敗：", e)
+
 
 # 本地測試
 if __name__ == "__main__":
