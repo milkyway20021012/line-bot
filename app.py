@@ -44,11 +44,18 @@ def handle_message(event):
 
 def process_text_message(event):
     user_text = event.message.text.strip()
+    user_id = event.source.user_id
 
+    # ✅ 先推送「正在處理中」
+    try:
+        line_bot_api.push_message(user_id, TextSendMessage(text="⌛ 正在處理中，請稍候..."))
+    except Exception as e:
+        print("⚠️ 推送處理中訊息失敗：", e)
+
+    # 🧠 接著處理 AI 回覆
     if user_text == "排行榜":
         reply_text = "📊 此功能尚未完善，敬請期待後續更新！"
     else:
-        # OpenAI GPT 回覆
         try:
             response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -61,11 +68,11 @@ def process_text_message(event):
         except Exception as e:
             reply_text = f"⚠️ 發生錯誤：{str(e)}"
 
+    # ✅ 再用 push_message 發送正式回覆
     try:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        line_bot_api.push_message(user_id, TextSendMessage(text=reply_text))
     except Exception as e:
-        print("⚠️ 回覆訊息失敗：", e)
-
+        print("⚠️ 推送回覆訊息失敗：", e)
 
 # 本地測試
 if __name__ == "__main__":
